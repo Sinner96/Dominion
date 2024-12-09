@@ -31,23 +31,35 @@ public class Dominion implements DominionInterface {
         player = new Figure(baseGame, Color.blue,false);
         npc = new Figure(baseGame, Color.red, true);
 
+        for (int col = 0; col < tileManager.getNumColumns(); col++) {     //set random tile
+            for (int raw = 0; raw < tileManager.getNumRows(); raw++) {
+                if (Math.random() < 0.5){
+                    tileManager.getTile(col, raw).setOwner(player);
+                }else {
+                    tileManager.getTile(col, raw).setOwner(npc);
+                }
+            }
+        }
 
     }
+
+
 
 
     @Override
     public void update(BaseGame baseGame, double v) {
-        if(checkWinner()){
-            baseGame.setWinner(winner);
+        checkWinner();
+        if  (winner!=null){
+            baseGame.setWinner(winner);                             //if att. winner was set by checkWinner() then winner will be set and game ends
         }
-            if (!npc.isWalking()){
-                npc.setDepartureTime(npc.getPauseDuration());   //set new target
-                chooseTarget(npc);
-            }
+
+        if (!npc.isWalking() && v >= npc.getDepartureTime()){
+                chooseTarget(npc);                                      //if game time reached the departure time which was set by reached target, then it choose next
+        }
 
     }
 
-    private boolean checkWinner() {
+    private void checkWinner() {
         boolean playerWon = true;
         boolean npcWon = true;
 
@@ -55,44 +67,40 @@ public class Dominion implements DominionInterface {
             for (int raw = 0; raw < tileManager.getNumRows(); raw++) {
                 if (tileManager.getTile(col, raw).isPropertyOf(npc)) {
                     playerWon = false;
-                } else if (tileManager.getTile(col, raw).isPropertyOf(player)) {
+                } else if (tileManager.getTile(col, raw).isPropertyOf(player)) {            //if a figure has all tile, should one of the boolean set to false
                     npcWon = false;
                 }
+
+
             }
         }
-        if (playerWon) {
-            winner = getPlayer();
 
-        } else if (npcWon){
-            winner = getNpc();
+        if (playerWon){
+            winner=getPlayer();
+        }else if(npcWon){                                                                   //if one of figures won, should his boolean still true and winner shall be set
+            winner=getNpc();
         }
-
-        return false;
     }
 
     @Override
     public void chooseTarget(Figure figure) {
-       int currRaw = figure.getTile().getRow();
-       int currCol = figure.getTile().getColumn();
+
         DominionTile next = null;
 
        for (int col = 0; col < tileManager.getNumColumns(); col++){
            for (int raw = 0; raw < tileManager.getNumRows(); raw++){
 
-               if (raw == currRaw && col == currCol) {
-                   continue;
-               }
-
-               DominionTile curr = tileManager.getTile(col, raw);
+               DominionTile curr = tileManager.getTile(col, raw);     //current choosen tile
 
                if (curr.isPropertyOf(figure)){
-                   continue;
+                   continue;                                        //skip if owned by npc
                }
+
                next = curr;
 
            }
         }
-       figure.moveTo(next);
+       figure.moveTo(next);                                         //move to next
     }
 
 
@@ -100,14 +108,18 @@ public class Dominion implements DominionInterface {
     public void clickedTile(DominionTile dominionTile) {
             if(!getPlayer().isWalking()){
                 getPlayer().moveTo(dominionTile);
+                dominionTile.setOwner(getPlayer());
             }
     }
 
     @Override
     public void reachedTarget(Figure figure, double v) {
-        figure.getTile().setOwner(figure);
+        figure.getTile().setOwner(figure);             //set the new owner of the tile
+        figure.setPauseDuration(.5);                    //set pause half second for NPC to make it faster
+
+
         if(figure.isNpc()){
-            figure.setDepartureTime(figure.getDepartureTime());
+            figure.setDepartureTime(v + figure.getPauseDuration());    //set deptarture time = (current game time + pause duration)
         }
     }
 }
